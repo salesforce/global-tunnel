@@ -40,6 +40,7 @@ function tryParse(url) {
   conf.protocol = parsed.protocol;
   conf.host = parsed.hostname;
   conf.port = parseInt(parsed.port,10);
+  conf.proxyAuth = parsed.auth;
   return conf;
 }
 
@@ -139,7 +140,7 @@ globalTunnel._makeAgent = function(conf, innerProtocol, useCONNECT) {
   innerProtocol = innerProtocol + ':';
 
   var opts = {
-    proxy: _.pick(conf, 'host','port','protocol','localAddress'),
+    proxy: _.pick(conf, 'host','port','protocol','localAddress', 'proxyAuth'),
     maxSockets: conf.sockets
   };
   opts.proxy.innerProtocol = innerProtocol;
