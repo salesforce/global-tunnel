@@ -1,6 +1,6 @@
 /*jshint node:true*/
 'use strict';
-var assert = require('goinstant-assert');
+var assert = require('assert');
 var sinon = require('sinon');
 
 // deliberate: node and 3rd party modules before global-tunnel
@@ -79,25 +79,25 @@ describe('global-proxy', function() {
   describe('invalid configs', function() {
     it('requires a host', function() {
       var conf = { host: null, port: 1234 };
-      assert.exception(function() {
+      assert.throws(function() {
         globalTunnel.initialize(conf);
-      }, 'upstream proxy host is required');
+      }, /upstream proxy host is required/);
       globalTunnel.end();
     });
 
     it('requires a port', function() {
       var conf = { host: '10.2.3.4', port: 0 };
-      assert.exception(function() {
+      assert.throws(function() {
         globalTunnel.initialize(conf);
-      }, 'upstream proxy port is required');
+      }, /upstream proxy port is required/);
       globalTunnel.end();
     });
 
     it('clamps tunnel types', function() {
       var conf = { host: '10.2.3.4', port: 1234, connect: 'INVALID' };
-      assert.exception(function() {
+      assert.throws(function() {
         globalTunnel.initialize(conf);
-      }, 'valid connect options are "neither", "https", or "both"');
+      }, /valid connect options are "neither", "https", or "both"/);
       globalTunnel.end();
     });
   });
@@ -143,12 +143,13 @@ describe('global-proxy', function() {
         var method = req.method;
         assert.equal(method, 'GET');
 
-        var path = req.path;
+        var pattern;
         if (innerSecure) {
-          assert.match(path, new RegExp('^https://example\\.dev:443/'));
+          pattern = new RegExp('^https://example\\.dev:443/');
         } else {
-          assert.match(path, new RegExp('^http://example\\.dev:80/'));
+          pattern = new RegExp('^http://example\\.dev:80/');
         }
+        assert(pattern.test(req.path));
       }
     }
 
@@ -167,12 +168,12 @@ describe('global-proxy', function() {
     });
 
     it('(got proxying set up)', function() {
-      assert.isTrue(globalTunnel.isProxying);
+      assert(globalTunnel.isProxying);
     });
 
     describe('with the request library', function() {
       it('will proxy http requests', function(done) {
-        assert.isTrue(globalTunnel.isProxying);
+        assert(globalTunnel.isProxying);
         var dummyCb = sinon.stub();
         request.get('http://example.dev/', dummyCb);
         setImmediate(function() {
@@ -184,7 +185,7 @@ describe('global-proxy', function() {
       });
 
       it('will proxy https requests', function(done) {
-        assert.isTrue(globalTunnel.isProxying);
+        assert(globalTunnel.isProxying);
         var dummyCb = sinon.stub();
         request.get('https://example.dev/', dummyCb);
         setImmediate(function() {
@@ -361,7 +362,7 @@ describe('global-proxy', function() {
   // deliberately after the block above
   describe('with proxy disabled', function() {
     it('claims to be disabled', function() {
-      assert.isFalse(globalTunnel.isProxying);
+      assert(!globalTunnel.isProxying);
     });
 
     it('will NOT proxy http requests', function(done) {

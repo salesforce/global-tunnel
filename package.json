@@ -16,7 +16,6 @@
   },
   "devDependencies": {
     "mocha": "1.16.2",
-    "goinstant-assert": "1.1.1",
     "request": "2.30.0",
     "sinon": "1.7.3"
   },
