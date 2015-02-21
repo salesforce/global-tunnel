@@ -2,6 +2,7 @@
 'use strict';
 var assert = require('assert');
 var sinon = require('sinon');
+var _ = require('lodash');
 
 // deliberate: node and 3rd party modules before global-tunnel
 var EventEmitter = require('events').EventEmitter;
@@ -106,6 +107,7 @@ describe('global-proxy', function() {
 
     function connected(innerProto) {
       var innerSecure = (innerProto === 'https:');
+      var whichAgent = innerSecure ? https.globalAgent : http.globalAgent;
 
       var called;
       if (testParams.secure) {
@@ -129,13 +131,19 @@ describe('global-proxy', function() {
         (innerSecure && testParams.connect === 'https');
       if (isCONNECT) {
         var expectConnect = 'example.dev:' + (innerSecure ? 443 : 80);
-        var whichAgent = innerSecure ? https.globalAgent : http.globalAgent;
 
         sinon.assert.calledOnce(whichAgent.request);
         sinon.assert.calledWith(whichAgent.request,
                                 sinon.match.has('method','CONNECT'));
         sinon.assert.calledWith(whichAgent.request,
                                 sinon.match.has('path',expectConnect));
+
+        if (testParams.auth) {
+          var headers = whichAgent.request.firstCall.args[0].headers;
+          assert.equal(headers['Proxy-Authorization'],
+                       'Basic ' + testParams.auth);
+        }
+
       } else {
         sinon.assert.calledOnce(http.Agent.prototype.addRequest);
         var req = http.Agent.prototype.addRequest.getCall(0).args[0];
@@ -150,6 +158,11 @@ describe('global-proxy', function() {
           pattern = new RegExp('^http://example\\.dev:80/');
         }
         assert(pattern.test(req.path));
+
+        if (testParams.auth) {
+          assert.equal(req.getHeader('proxy-authorization'),
+                       'Basic ' + testParams.auth);
+        }
       }
     }
 
@@ -279,62 +292,62 @@ describe('global-proxy', function() {
     proxyEnabledTests(testParams);
   }
 
-  describe('with http proxy in intercept mode', function() {
+  [
+    {
+      label: 'http proxy in intercept mode',
+      config: { connect: 'neither', protocol: 'http:' },
+      expect: { secure: false, connect: 'neither' }
+    },
+    {
+      label: 'https proxy in intercept mode',
+      config: { connect: 'neither', protocol: 'https:' },
+      expect: { secure: true, connect: 'neither' }
+    },
+    {
+      label: 'http proxy in CONNECT mode',
+      config: { connect: 'both', protocol: 'http:' },
+      expect: { secure: false, connect: 'both' }
+    },
+    {
+      label: 'https proxy in CONNECT mode',
+      config: { connect: 'both', protocol: 'https:' },
+      expect: { secure: true, connect: 'both' }
+    },
+    {
+      label: 'http proxy in mixed mode',
+      config: { protocol: 'http:' },
+      expect: { secure: false, connect: 'https' }
+    },
+    {
+      label: 'https proxy in mixed mode',
+      config: { protocol: 'https:' },
+      expect: { secure: true, connect: 'https' }
+    }
+  ].forEach(function(testCase) {
     var conf = {
-      connect: 'neither',
-      protocol: 'http:',
+      protocol: testCase.config.protocol,
+      connect: testCase.config.connect,
       host: '10.2.3.4',
+      port: 3333,
+    };
+    var expect = {
+      secure: testCase.expect.secure,
+      connect: testCase.expect.connect,
       port: 3333
-    };
-    enabledBlock(conf, { secure: false, connect: 'neither', port: 3333 });
-  });
+    }
 
-  describe('with https proxy in intercept mode', function() {
-    var conf = {
-      connect: 'neither',
-      protocol: 'https:',
-      host: '10.2.3.4',
-      port: 3334
-    };
-    enabledBlock(conf, { secure: true, connect: 'neither', port: 3334 });
-  });
+    var authConf = _.clone(conf);
+    var authExpect = _.clone(expect);
+    authConf.proxyAuth = 'un:pw';
+    authExpect.auth = 'dW46cHc=';
 
-  describe('with http proxy in CONNECT mode', function() {
-    var conf = {
-      connect: 'both',
-      protocol: 'http:',
-      host: '10.2.3.4',
-      port: 3335
-    };
-    enabledBlock(conf, { secure: false, connect: 'both', port: 3335 });
-  });
+    describe('with '+testCase.label, function() {
+      enabledBlock(conf, expect);
+    });
 
-  describe('with https proxy in CONNECT mode', function() {
-    var conf = {
-      connect: 'both',
-      protocol: 'https:',
-      host: '10.2.3.4',
-      port: 3336
-    };
-    enabledBlock(conf, { secure: true, connect: 'both', port: 3336 });
-  });
-
-  describe('with http proxy in mixed mode', function() {
-    var conf = {
-      protocol: 'http:',
-      host: '10.2.3.4',
-      port: 3337
-    };
-    enabledBlock(conf, { secure: false, connect: 'https', port: 3337 });
-  });
-
-  describe('with https proxy in mixed mode', function() {
-    var conf = {
-      protocol: 'https:',
-      host: '10.2.3.4',
-      port: 3338
-    };
-    enabledBlock(conf, { secure: true, connect: 'https', port: 3338 });
+    describe('with authenticated '+testCase.label, function() {
+      enabledBlock(authConf, authExpect);
+    });
   });
 
 
