@@ -54,8 +54,14 @@ globalTunnel.isProxying = false;
  * @param {object} conf
  * @param {string} conf.host
  * @param {int} conf.port
+ * @param {string} conf.protocol the protocol the proxy speaks, 'http:' or
+ * 'https:'
+ * @param {string} [conf.connect] controls what protocols to use CONNECT with.
+ * See README for possible values (e.g. "neither", "https", "both"). Default is
+ * "https".
  * @param {int} [conf.sockets] maximum number of sockets to pool (falsy uses
  * node's default).
+ * @param {string} [conf.proxyAuth] Basic authentication string
  */
 globalTunnel.initialize = function(conf) {
   if (globalTunnel.isProxying) {
@@ -139,7 +145,7 @@ globalTunnel._makeAgent = function(conf, innerProtocol, useCONNECT) {
   innerProtocol = innerProtocol + ':';
 
   var opts = {
-    proxy: _.pick(conf, 'host','port','protocol','localAddress'),
+    proxy: _.pick(conf, 'host','port','protocol','localAddress','proxyAuth'),
     maxSockets: conf.sockets
   };
   opts.proxy.innerProtocol = innerProtocol;

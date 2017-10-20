@@ -55,6 +55,10 @@ The complete list of options to `globalTunnel.initialize`:
 - **sockets** - _(optional)_ maximum number of TCP sockets to use in each pool.
   There are two pools: one for HTTP and one for HTTPS.  Uses node's default (5)
   if falsy.
+- **proxyAuth** - _(optional)_ a string to use for Basic HTTP authentication.
+  This gets base64-encoded then sent as part of the standard
+  `Proxy-Authorization` header on `CONNECT` requests. Typically, this is of the
+  form `username:password`.
 
 ## Variations
 
